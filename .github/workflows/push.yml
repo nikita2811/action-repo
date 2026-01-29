@@ -1,0 +1,24 @@
+name: Send Push Event
+
+on:
+  push:
+
+jobs:
+  notify-webhook:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send push event to webhook
+        run: |
+          curl -X POST $WEBHOOK_URL \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: push" \
+            -d '{
+              "repo": "${{ github.repository }}",
+              "branch": "${{ github.ref_name }}",
+              "commit": "${{ github.sha }}",
+              "author": "${{ github.actor }}",
+              "timestamp": "${{ github.event.head_commit.timestamp }}"
+            }'
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
