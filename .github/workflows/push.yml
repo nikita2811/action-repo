@@ -1,24 +1,39 @@
-name: Send Push Event
+name: Send GitHub Events to Webhook
 
 on:
   push:
+  pull_request:
+    types: [opened, synchronize, closed]
 
 jobs:
-  notify-webhook:
+  send-webhook:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send push event to webhook
-        run: |
-          curl -X POST $WEBHOOK_URL \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Event: push" \
-            -d '{
-              "repo": "${{ github.repository }}",
-              "branch": "${{ github.ref_name }}",
-              "commit": "${{ github.sha }}",
-              "author": "${{ github.actor }}",
-              "timestamp": "${{ github.event.head_commit.timestamp }}"
-            }'
+      - name: Send webhook payload
         env:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+          EVENT_NAME: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          AUTHOR: ${{ github.actor }}
+          DELIVERY_ID: ${{ github.run_id }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          curl -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: $EVENT_NAME" \
+            -H "X-GitHub-Delivery: $DELIVERY_ID" \
+            -d '{
+              "id": "'"$DELIVERY_ID"'",
+              "action": "'"$ACTION"'",
+              "author": "'"$AUTHOR"'",
+              "pull_request": {
+                "head": {
+                  "ref": "'"$HEAD_REF"'"
+                },
+                "base": {
+                  "ref": "'"$BASE_REF"'"
+                }
+              }
+            }'
